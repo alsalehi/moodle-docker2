@@ -65,6 +65,7 @@ services:
     networks:
       - frontend  # Needs internet access for Moodle download
       - backend
+      - dokploy-network
     depends_on:
       database:
         condition: service_healthy
@@ -202,6 +203,8 @@ networks:
   backend:
     name: ${COMPOSE_PROJECT_NAME:-moodle}_backend
     internal: true
+  dokploy-network:
+    external: true
 
 # =============================================================================
 # Volumes
