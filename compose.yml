@@ -5,37 +5,37 @@ services:
   # ==========================================================================
   # nginx - Web Server
   # ==========================================================================
-  nginx:
-    image: netresearch/moodle-nginx:latest
-    build:
-      context: ./docker/nginx
-      dockerfile: Dockerfile
-    container_name: ${COMPOSE_PROJECT_NAME:-moodle}_nginx
-    restart: unless-stopped
-    ports:
-      - "${HTTP_PORT:-80}:80"
-      - "${HTTPS_PORT:-443}:443/tcp"
-      - "${HTTPS_PORT:-443}:443/udp"  # HTTP/3 QUIC
-    volumes:
-      - moodle_code:/var/www/html:ro
-      - ./docker/nginx/ssl:/etc/nginx/ssl:ro
-    networks:
-      - frontend
-      - backend
-    depends_on:
-      moodle:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/nginx-health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
+  # nginx:
+  #   image: netresearch/moodle-nginx:latest
+  #   build:
+  #     context: ./docker/nginx
+  #     dockerfile: Dockerfile
+  #   container_name: ${COMPOSE_PROJECT_NAME:-moodle}_nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "${HTTP_PORT:-80}:80"
+  #     - "${HTTPS_PORT:-443}:443/tcp"
+  #     - "${HTTPS_PORT:-443}:443/udp"  # HTTP/3 QUIC
+  #   volumes:
+  #     - moodle_code:/var/www/html:ro
+  #     - ./docker/nginx/ssl:/etc/nginx/ssl:ro
+  #   networks:
+  #     - frontend
+  #     - backend
+  #   depends_on:
+  #     moodleserver:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost/nginx-health"]
+  #     interval: 30s
+  #     timeout: 5s
+  #     retries: 3
+  #     start_period: 10s
 
   # ==========================================================================
   # Moodle - PHP-FPM Application
   # ==========================================================================
-  moodle:
+  moodleserver:
     image: netresearch/moodle:${MOODLE_VERSION:-5.1}
     build:
       context: ./docker/moodle
@@ -80,38 +80,38 @@ services:
   # ==========================================================================
   # Moodle Cron - Dedicated Container for Scheduled Tasks
   # ==========================================================================
-  moodle-cron:
-    image: netresearch/moodle:${MOODLE_VERSION:-5.1}
-    build:
-      context: ./docker/moodle
-      dockerfile: Dockerfile
-    container_name: ${COMPOSE_PROJECT_NAME:-moodle}_cron
-    restart: unless-stopped
-    command: ["sleep", "infinity"]
-    volumes:
-      - moodle_code:/var/www/html:ro
-      - moodledata:/var/moodledata
-    environment:
-      - MOODLE_SKIP_BOOTSTRAP=true
-      - DB_TYPE=${DB_TYPE:-mariadb}
-      - DB_HOST=${DB_HOST:-database}
-      - DB_NAME=${DB_NAME:-moodle}
-      - DB_USER=${DB_USER:-moodle}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_PREFIX=${DB_PREFIX:-mdl_}
-      - VALKEY_HOST=${VALKEY_HOST:-valkey}
-      - VALKEY_PORT=${VALKEY_PORT:-6379}
-      - VALKEY_PASSWORD=${VALKEY_PASSWORD}
-    networks:
-      - backend
-    depends_on:
-      moodle:
-        condition: service_healthy
-    labels:
-      ofelia.enabled: "true"
-      ofelia.job-exec.moodle-cron.schedule: "@every 1m"
-      ofelia.job-exec.moodle-cron.command: "php /var/www/html/admin/cli/cron.php"
-      ofelia.job-exec.moodle-cron.user: "www-data"
+  # moodle-cron:
+  #   image: netresearch/moodle:${MOODLE_VERSION:-5.1}
+  #   build:
+  #     context: ./docker/moodle
+  #     dockerfile: Dockerfile
+  #   container_name: ${COMPOSE_PROJECT_NAME:-moodle}_cron
+  #   restart: unless-stopped
+  #   command: ["sleep", "infinity"]
+  #   volumes:
+  #     - moodle_code:/var/www/html:ro
+  #     - moodledata:/var/moodledata
+  #   environment:
+  #     - MOODLE_SKIP_BOOTSTRAP=true
+  #     - DB_TYPE=${DB_TYPE:-mariadb}
+  #     - DB_HOST=${DB_HOST:-database}
+  #     - DB_NAME=${DB_NAME:-moodle}
+  #     - DB_USER=${DB_USER:-moodle}
+  #     - DB_PASSWORD=${DB_PASSWORD}
+  #     - DB_PREFIX=${DB_PREFIX:-mdl_}
+  #     - VALKEY_HOST=${VALKEY_HOST:-valkey}
+  #     - VALKEY_PORT=${VALKEY_PORT:-6379}
+  #     - VALKEY_PASSWORD=${VALKEY_PASSWORD}
+  #   networks:
+  #     - backend
+  #   depends_on:
+  #     moodleserver:
+  #       condition: service_healthy
+  #   labels:
+  #     ofelia.enabled: "true"
+  #     ofelia.job-exec.moodle-cron.schedule: "@every 1m"
+  #     ofelia.job-exec.moodle-cron.command: "php /var/www/html/admin/cli/cron.php"
+  #     ofelia.job-exec.moodle-cron.user: "www-data"
 
   # ==========================================================================
   # MariaDB 11.8 LTS - Database
@@ -163,35 +163,35 @@ services:
   # ==========================================================================
   # Ofelia - Cron Scheduler
   # ==========================================================================
-  ofelia:
-    image: mcuadros/ofelia:latest
-    container_name: ${COMPOSE_PROJECT_NAME:-moodle}_ofelia
-    restart: unless-stopped
-    command: daemon --docker
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - backend
-    depends_on:
-      - moodle-cron
+  # ofelia:
+  #   image: mcuadros/ofelia:latest
+  #   container_name: ${COMPOSE_PROJECT_NAME:-moodle}_ofelia
+  #   restart: unless-stopped
+  #   command: daemon --docker
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock:ro
+  #   networks:
+  #     - backend
+  #   depends_on:
+  #     - moodle-cron
 
   # ==========================================================================
   # Mailpit - Development Mail Catcher (Optional)
   # ==========================================================================
-  mailpit:
-    image: axllent/mailpit:latest
-    container_name: ${COMPOSE_PROJECT_NAME:-moodle}_mailpit
-    restart: unless-stopped
-    profiles:
-      - dev
-      - mail
-    networks:
-      - backend
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8025"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+  # mailpit:
+  #   image: axllent/mailpit:latest
+  #   container_name: ${COMPOSE_PROJECT_NAME:-moodle}_mailpit
+  #   restart: unless-stopped
+  #   profiles:
+  #     - dev
+  #     - mail
+  #   networks:
+  #     - backend
+  #   healthcheck:
+  #     test: ["CMD", "wget", "-q", "--spider", "http://localhost:8025"]
+  #     interval: 30s
+  #     timeout: 5s
+  #     retries: 3
 
 # =============================================================================
 # Networks
